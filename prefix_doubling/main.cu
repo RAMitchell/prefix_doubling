@@ -1,4 +1,3 @@
-
 #include "cuda_runtime.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -12,6 +11,8 @@
 #include <thrust/iterator/counting_iterator.h>
 
 #include "cuda_helpers.cuh"
+
+#include "divsufsort.h"
 
 typedef uint8_t U8;
 typedef uint32_t U32;
@@ -93,7 +94,7 @@ void get_sort_keys(thrust::device_vector<int>& keys, thrust::device_vector<int>&
 
 void sort_sa(thrust::device_vector<int>& keys, thrust::device_vector<int>& buckets, thrust::device_vector<int>& sa){
 	
-	stable_sort_by_key(keys.begin(), keys.end(), sa.begin());
+	stable_sort_by_key(keys.begin(), keys.end(), thrust::make_zip_iterator(make_tuple(sa.begin(), buckets.begin())));
 
 	stable_sort_by_key(buckets.begin(), buckets.end(), sa.begin());
 
@@ -137,12 +138,10 @@ int suffix_array(const thrust::device_vector<U8>& data, thrust::device_vector<in
 		//Sort
 		sort_sa(keys, buckets, sa);
 
-
 		print("SA", sa);
 		print("Keys", keys);
 		print("Buckets", buckets);
 		print("rank", rank);
-		return 0;
 
 		step *= 2;
 
@@ -166,6 +165,22 @@ int main()
 	device_vector<int> sa(n); //Suffix array
 	
 	suffix_array(data, sa);
+
+	//Copy sa back to host
+	host_vector<int> h_sa(sa);
 	
+	/*
+	//Get reference suffix array
+	host_vector<int> div_sa(n);
+	divsufsort((const unsigned char*)test, div_sa.data(), n, 0);
+
+	//Compare
+	if (h_sa == div_sa){
+		std::cout << "Success. SA is correct.\n";
+	}
+	else{
+		std::cout << "Error. SA is incorrect.\n";
+	}
+	*/
     return 0;
 }
