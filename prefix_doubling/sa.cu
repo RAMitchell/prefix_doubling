@@ -37,15 +37,15 @@ void mark_head(device_vector<int>& keys, device_vector<U8>& buckets){
 		else if (keys_r[i] != keys_r[i - 1]){
 			bucket_r[i] = 1;
 		}
-
 	});
 }
-
 
 void get_rank(device_vector<U8>& buckets, device_vector<int>& b_scan, device_vector<int>& rank, device_vector<int>& sa){
 
 	//Scan bucket heads
-	inclusive_scan(buckets.begin(), buckets.end(), b_scan.begin());
+	//Copy buckets into rank before we scan it into b_scan - scanning 8 bit types creates problems
+	copy(buckets.begin(), buckets.end(), rank.begin());
+	inclusive_scan(rank.begin(), rank.end(), b_scan.begin());
 
 	//Calculate rank - stores rank inverse to the suffix array
 	// e.g. rank[3] stores the bucket position of sa[?] = 3
@@ -63,45 +63,47 @@ void get_rank(device_vector<U8>& buckets, device_vector<int>& b_scan, device_vec
 
 }
 
-void get_sort_keys(device_vector<int>& keys, device_vector<int>& rank, device_vector<int>& sa, int step){
+void get_sort_keys(device_vector<int>& keys, device_vector<int>& rank, device_vector<int>& sa, device_vector<U8>& buckets, int step){
 
 	int *rank_r = raw(rank);
 	int *sa_r = raw(sa);
 	int *keys_r = raw(keys);
+	U8 *buckets_r = raw(buckets);
 
 	auto r = counting_iterator<int>(0);
 	int n = keys.size();
 
 	for_each(r, r + n, [=] __device__(int i) {
-		//TODO: check if already sorted
+		//Check if already sorted
+		//If is last item - just need to check its flag
+		if (buckets_r[i] == 1 && i == n - 1)
+			return;
+		//Otherwise, if the current item and its next item are flagged, current item must be already sorted
+		else if (buckets_r[i] == 1 && buckets_r[i + 1])
+			return;
 
+		//Set sort keys
 		int next_suffix = sa_r[i] + step;
-		//Went of end of string - must be lexicographically less than rest of bucket
-		if (next_suffix >= n){
-			//TODO: can this just be -1?
+		//Went off end of string - must be lexicographically less than rest of bucket
+		if (next_suffix >= n)
 			keys_r[i] = -next_suffix;
-		}
+
 		//Else set sort key to rank of next suffix
-		else{
+		else
 			keys_r[i] = rank_r[next_suffix];
-		}
 	});
-
-
 }
 
+//We have to do a 2 pass sort here to effectively get a segmented sort
 void sort_sa(device_vector<int>& keys, device_vector<int>& b_scan, device_vector<int>& sa){
 
 	stable_sort_by_key(keys.begin(), keys.end(), make_zip_iterator(make_tuple(sa.begin(), b_scan.begin())));
-
 	stable_sort_by_key(b_scan.begin(), b_scan.end(), make_zip_iterator(make_tuple(sa.begin(), keys.begin())));
-
 }
 
 int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 	
 	try{
-
 		//Copy up to device vectors
 		device_vector<U8> data(data_in, data_in + n);
 		device_vector<int> sa(n);
@@ -134,7 +136,7 @@ int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 			get_rank(buckets, b_scan, rank, sa);
 
 			//Use rank as new sort keys
-			get_sort_keys(keys, rank, sa, step);
+			get_sort_keys(keys, rank, sa, buckets, step);
 
 			//Sort
 			sort_sa(keys, b_scan, sa);
@@ -150,16 +152,12 @@ int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 
 			step *= 2;
 
-
 			//Just in case, check for infinite loop
 			if (step < 0){
 				std::cout << "Error: Prefix doubling infinite loop.\n";
 				return 1;
 			}
 		}
-
-		//std::cout << "-----\n";
-		//print("SA", sa);
 
 		//Copy SA back to host
 		safe_cuda(cudaMemcpy(sa_in, raw(sa), sizeof(int)*sa.size(), cudaMemcpyDeviceToHost));

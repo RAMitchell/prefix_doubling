@@ -50,11 +50,15 @@ void print(const thrust::device_vector<T>& v)
 }
 
 template <typename T>
-void print(char *label, const thrust::device_vector<T>& v)
+void print(char *label, const thrust::device_vector<T>& v, int max = 10)
 {
+	int i = 0;
 	std::cout << label << ":\n";
-	for (auto elem : v)
+	for (auto elem : v){
 		std::cout << " " << (int)elem;
+		i++;
+		if (i >= max) break;
+	}
 	std::cout << "\n";
 }
 
