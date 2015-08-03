@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <iostream>
 
-//Thrust includes
+//Thrust
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/sequence.h>
@@ -16,6 +16,35 @@ typedef uint8_t U8;
 typedef uint32_t U32;
 
 using namespace thrust;
+
+//Pack 4 U8's into an int
+void pack(device_vector<U8>& data, device_vector<int>& keys){
+	
+	U8 *data_r = raw(data);
+	int *keys_r = raw(keys);
+
+	auto r = counting_iterator<int>(0);
+	int n = keys.size();
+
+	for_each(r, r + n, [=] __device__(int i) {
+		
+		int packed = data_r[i];
+		
+		packed <<= 8;
+		if (i + 1 < n)
+			packed |= data_r[i+1];
+		packed <<= 8;
+		if (i + 2 < n)
+			packed |= data_r[i + 2];
+		packed <<= 8;
+		if (i + 3 < n)
+			packed |= data_r[i + 3];
+		
+
+		keys_r[i] = packed;
+
+	});
+}
 
 void mark_head(device_vector<int>& keys, device_vector<U8>& buckets){
 
@@ -94,6 +123,7 @@ void get_sort_keys(device_vector<int>& keys, device_vector<int>& rank, device_ve
 	});
 }
 
+
 //We have to do a 2 pass sort here to effectively get a segmented sort
 void sort_sa(device_vector<int>& keys, device_vector<int>& b_scan, device_vector<int>& sa){
 
@@ -101,7 +131,7 @@ void sort_sa(device_vector<int>& keys, device_vector<int>& b_scan, device_vector
 	stable_sort_by_key(b_scan.begin(), b_scan.end(), make_zip_iterator(make_tuple(sa.begin(), keys.begin())));
 }
 
-int suffix_array(const unsigned char *data_in, int *sa_in, int n){
+int device_sa(const unsigned char *data_in, int *sa_in, int n){
 	
 	try{
 		//Copy up to device vectors
@@ -116,12 +146,16 @@ int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 		device_vector<int> b_scan(n); //Scanned head flags
 		device_vector<int> rank(n); //Rank of suffixes
 
-		copy(data.begin(), data.end(), keys.begin());
+		//Pack 4 bytes into keys so we can radix sort to H order 4 before prefix doubling
+		pack(data, keys);
+		
+		//Radix sort as unsigned 
+		//We have to cast keys to a raw pointer then to a device_ptr to convince thrust its unsigned
+		unsigned int *keys_r = (unsigned int*)raw(keys);
+		device_ptr<unsigned int> keys_ptr(keys_r);
+		stable_sort_by_key(keys_ptr, keys_ptr + n, sa.begin());
 
-		//Radix sort data and SA
-		stable_sort_by_key(keys.begin(), keys.end(), sa.begin());
-
-		int step = 1;
+		int step = 4;
 		//Begin prefix doubling loop - runs at most log(n) times
 		while (true){
 
@@ -140,7 +174,6 @@ int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 
 			//Sort
 			sort_sa(keys, b_scan, sa);
-
 			/*
 			std::cout << "-----\n";
 			print("SA", sa);
@@ -149,7 +182,6 @@ int suffix_array(const unsigned char *data_in, int *sa_in, int n){
 			print("rank", rank);
 			std::cout << "-----\n";
 			*/
-
 			step *= 2;
 
 			//Just in case, check for infinite loop

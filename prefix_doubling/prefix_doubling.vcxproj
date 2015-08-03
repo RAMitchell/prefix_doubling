@@ -105,6 +105,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <AdditionalOptions> --expt-extended-lambda %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,15 +154,15 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="main.cpp" />
-    <CudaCompile Include="sa.cu" />
+    <CudaCompile Include="device_sa.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_helpers.cuh" />
-    <ClInclude Include="sa.cuh" />
-    <ClInclude Include="sa.h" />
+    <ClInclude Include="device_sa.cuh" />
+    <ClInclude Include="host_sa.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sa.cpp" />
+    <ClCompile Include="host_sa.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

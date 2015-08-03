@@ -12,7 +12,7 @@ bool sufCmp(int i, int j, std::vector<int> &pos, int n, int gap)
 	return (i < n && j < n) ? pos[i] < pos[j] : i > j;
 }
 
-void cpuSA(const unsigned char * S, int * sa, int n)
+void host_sa(const unsigned char * S, int * sa, int n)
 {
 	std::vector<int> pos(n);
 	std::vector<int> tmp(n);

@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <time.h> 
 
-#include "sa.cuh"
-#include "sa.h"
+#include "device_sa.cuh"
+#include "host_sa.h"
 
 using namespace std;
 
@@ -48,14 +48,14 @@ void test_sa(int n, int mod){
 	vector<int> sa(n);
 	
 	Timer t;
-	suffix_array(data.data(), sa.data(), n);
+	device_sa(data.data(), sa.data(), n);
 	t.printElapsed("Cuda suffix array");
 
 	vector<int> cpu_sa(n); 
 	
 	t.reset();
 	//Get reference suffix array
-	cpuSA((const unsigned char*)data.data(), cpu_sa.data(), n);
+	host_sa((const unsigned char*)data.data(), cpu_sa.data(), n);
 	t.printElapsed("CPU suffix array");
 
 	//Compare
@@ -69,6 +69,7 @@ int main()
 {
 	//Size and alphabet size to test
 	int sizes[] = { 100000, 1000000, 10000000};
+	//int sizes[] = { 5 };
 	int mod[] = { 1, 26, 255 };
 	srand(0);
 
