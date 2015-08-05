@@ -40,7 +40,6 @@ void pack(device_vector<U8>& data, device_vector<int>& keys){
 		if (i + 3 < n)
 			packed |= data_r[i + 3];
 		
-
 		keys_r[i] = packed;
 
 	});
@@ -124,7 +123,7 @@ void get_sort_keys(device_vector<int>& keys, device_vector<int>& rank, device_ve
 }
 
 
-//We have to do a 2 pass sort here to effectively get a segmented sort
+//We have to do a 2 pass sort here to get a "segmented sort"
 void sort_sa(device_vector<int>& keys, device_vector<int>& b_scan, device_vector<int>& sa){
 
 	stable_sort_by_key(keys.begin(), keys.end(), make_zip_iterator(make_tuple(sa.begin(), b_scan.begin())));
