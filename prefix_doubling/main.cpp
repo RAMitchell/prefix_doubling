@@ -68,9 +68,7 @@ void test_sa(int n, int mod){
 int main()
 {
 	//Size and alphabet size to test
-	//int sizes[] = { 100000, 1000000, 10000000};
 	int sizes[] = { 10000000, 30000000, 50000000 };
-	//int sizes[] = { 5 };
 	int mod[] = { 4, 26, 255 };
 	srand(0);
 
