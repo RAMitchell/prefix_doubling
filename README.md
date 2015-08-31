@@ -4,12 +4,12 @@ This repo contains an implementation of the manber myers prefix doubling sort in
 
 It is used to create the suffix array of a given string. Suffix arrays may be used in data compression, genomic sequencing or text indexing. 
 
-#Build
+##Build
 The project can be built "as-is" with visual studio 2013 community and CUDA toolkit 7.5 or greater. 
 
 CUDA toolkit 7.5 is required due to the GPU lambda feature which makes the code more readable and concise. 
 
-#Benchmarks
+##Benchmarks
 Benchmarks performed with an i7-4700MQ and Nvidia GT 740m with 2GB video memory.
 
 The algorithm is tested up to sizes of 50MB on a 2GB card. You may find it runs out of memory at larger sizes.
@@ -21,7 +21,7 @@ Test sizes are 10MB and 30MB and alphabet sizes are 4 (e.g. DNA), 26 and 256. Da
 Note: Realistically you would not perform a suffix array sort on random data - it just provides a quick way of establishing basic performance characteristics.
 
 Implementation  | Size (MB) | Alphabet size | Time (s)
-------------- | -------------
+--- | --- | --- | ---
 CPU  | 10 | 4 | 62.70
 GPU  | 10 | 4 | 14.61
 CPU  | 10 | 26 | 9.45
